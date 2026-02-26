@@ -634,21 +634,20 @@ class TemplateDiscovery:
 
         core_files = {}
 
-        # Look for common PCILeech core files
+        # Only include files that are TRULY shared/common across ALL boards.
+        # WARNING: Do NOT add board-specific .sv files here! Files like
+        # pcileech_pcie_tlp_a7.sv, pcileech_pcie_a7.sv, pcileech_fifo.sv,
+        # pcileech_com.sv, pcileech_mux.sv, pcileech_pcie_cfg_a7.sv,
+        # pcileech_tlps128_bar_controller.sv etc. exist in EVERY board's
+        # src/ directory with board-specific modifications. The rglob search
+        # picks the FIRST match from ANY board, which overwrites the correct
+        # board-specific version copied by get_source_files().
+        # Only header/package files (.svh) that are identical across boards
+        # should be listed here.
         common_files = [
-            "pcileech_tlps128_bar_controller.sv",
-            "pcileech_tlps128_bar_controller_template.sv",
-            "pcileech_fifo.sv",
-            "pcileech_mux.sv",
-            "pcileech_com.sv",
-            "pcileech_pcie_cfg_a7.sv",
-            "pcileech_pcie_cfg_us.sv",
             "pcileech.svh",
             "pcileech_header.svh",
             "tlp_pkg.svh",
-            "bar_controller.sv",
-            "cfg_shadow.sv",
-            "pcileech_pcie_tlp_a7.sv",
         ]
 
         # Search in common locations
