@@ -528,6 +528,28 @@ class PCILeechBuildIntegration:
             shutil.copy2(board_generate_tcl, gen_dest)
             shutil.copy2(board_build_tcl, build_dest)
 
+            # Patch copied TCL for Vivado version compatibility
+            # Some properties (e.g. steps.opt_design.args.more_options) may not
+            # exist in all Vivado versions. Wrap problematic set_property calls
+            # with catch {} so they fail gracefully.
+            import re
+            gen_content = gen_dest.read_text()
+            # Wrap set_property lines that set impl run step options with catch
+            # Pattern: set_property -name "steps.*" ... -objects $obj
+            patched = re.sub(
+                r'^(set_property -name "steps\.[^"]*" .+)$',
+                r'catch {\1}',
+                gen_content,
+                flags=re.MULTILINE,
+            )
+            if patched != gen_content:
+                gen_dest.write_text(patched)
+                log_info_safe(
+                    logger,
+                    "Patched board TCL for Vivado version compatibility",
+                    prefix=self.prefix,
+                )
+
             # Create build_all.tcl that sources the original scripts
             # The original scripts use origin_dir "." to find src/ and ip/
             # Our output directory already has src/ and ip/ with correct files
