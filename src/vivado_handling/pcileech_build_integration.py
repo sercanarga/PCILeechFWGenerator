@@ -549,6 +549,19 @@ cd [file dirname [info script]]
 set origin_dir "."
 puts "Working directory: [pwd]"
 
+
+# Ensure constraint files are in src/ where the board script expects them
+# Our build system puts them in constraints/ but the original script expects src/
+if {{[file exists "constraints"]}} {{
+    foreach xdc [glob -nocomplain -directory "constraints" *.xdc] {{
+        set dest "src/[file tail $xdc]"
+        if {{![file exists $dest]}} {{
+            file copy -force $xdc $dest
+            puts "Copied constraint file to src/: [file tail $xdc]"
+        }}
+    }}
+}}
+
 # Step 1: Generate the Vivado project using board's original script
 puts ""
 puts "-------------------------------------------------------"
