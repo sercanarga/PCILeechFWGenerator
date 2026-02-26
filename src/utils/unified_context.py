@@ -1334,15 +1334,16 @@ class UnifiedContextBuilder:
 
         # PCIe link configuration (safe defaults for testing)
         # In production, these come from donor device profiling
+        # Default to Gen1 (2.5GT/s) for maximum compatibility with 7-series FPGAs
         context["target_link_speed"] = kwargs.get(
-            "target_link_speed", "5.0GT/s"
-        )  # Gen2 default (canonical form without underscore)
+            "target_link_speed", "2.5GT/s"
+        )  # Gen1 default (canonical form without underscore)
         context["target_link_speed_enum"] = kwargs.get(
-            "target_link_speed_enum", "5.0_GT/s"
-        )  # Gen2 default (Vivado enum form with underscore)
+            "target_link_speed_enum", "2.5_GT/s"
+        )  # Gen1 default (Vivado enum form with underscore)
         context["target_link_width_enum"] = kwargs.get(
-            "target_link_width_enum", "X4"
-        )  # x4 lanes default
+            "target_link_width_enum", "X1"
+        )  # x1 lane default (100t484 is x1)
 
         # Board part ID for Xilinx dev boards (None for custom PCILeech boards)
         # This enables board-specific optimizations when using official Xilinx boards
