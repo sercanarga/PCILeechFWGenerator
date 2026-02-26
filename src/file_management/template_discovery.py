@@ -635,20 +635,13 @@ class TemplateDiscovery:
         core_files = {}
 
         # Only include files that are TRULY shared/common across ALL boards.
-        # WARNING: Do NOT add board-specific .sv files here! Files like
-        # pcileech_pcie_tlp_a7.sv, pcileech_pcie_a7.sv, pcileech_fifo.sv,
-        # pcileech_com.sv, pcileech_mux.sv, pcileech_pcie_cfg_a7.sv,
-        # pcileech_tlps128_bar_controller.sv etc. exist in EVERY board's
-        # src/ directory with board-specific modifications. The rglob search
-        # picks the FIRST match from ANY board, which overwrites the correct
-        # board-specific version copied by get_source_files().
-        # Only header/package files (.svh) that are identical across boards
-        # should be listed here.
-        common_files = [
-            "pcileech.svh",
-            "pcileech_header.svh",
-            "tlp_pkg.svh",
-        ]
+        # WARNING: Do NOT add ANY files here! ALL source files (.sv AND .svh)
+        # are board-specific. Even pcileech_header.svh has different interface
+        # definitions per board (e.g. IfPCIeFifoCore has different signals).
+        # The rglob search picks the FIRST match from ANY board, which
+        # overwrites the correct board-specific version already copied by
+        # get_source_files(). All board files come from discover_templates().
+        common_files = []
 
         # Search in common locations
         search_dirs = [
