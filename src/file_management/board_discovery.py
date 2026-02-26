@@ -51,7 +51,7 @@ class BoardDiscovery:
         },
         "100t": {
             "dir": "ZDMA",
-            "fpga_part": "xczu3eg-sbva484-1-e",
+            "fpga_part": "xc7a100tfgg484-1",
             "max_lanes": 1,
         },
         # Modern board names

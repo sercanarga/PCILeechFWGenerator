@@ -231,6 +231,8 @@ class TemplateValidator:
             board_path / "constraints",
             board_path / "constrs",
             board_path / "xdc",
+            board_path / "src",
+            board_path,
         ]
 
         found_constraints: Set[str] = set()
@@ -303,8 +305,17 @@ class TemplateValidator:
         return len(found_scripts) > 0, warnings
 
     def _find_board_path(self, board_name: str) -> Optional[Path]:
-        """Find board directory in repository."""
-        # Common board directory patterns
+        """Find board directory in repository using RepoManager."""
+        # Try RepoManager first (handles canonical board-to-directory mappings)
+        try:
+            from pcileechfwgenerator.file_management.repo_manager import RepoManager
+            board_path = RepoManager.get_board_path(board_name, repo_root=self.repo_root)
+            if board_path and board_path.exists() and board_path.is_dir():
+                return board_path
+        except Exception:
+            pass
+
+        # Fallback: common board directory patterns
         search_patterns = [
             self.repo_root / board_name,
             self.repo_root / "boards" / board_name,

@@ -585,8 +585,8 @@ puts "Adding source files..."
             "}\n"
         )
 
-        # Handle locked IP cores with comprehensive strategy
-        script_content += "\n# Handle locked/out-of-date IP cores (enhanced)\n"
+        # Handle locked IP cores with part-aware retarget strategy
+        script_content += "\n# Handle locked/out-of-date IP cores (part-aware retarget)\n"
         script_content += (
             "puts \"Refreshing IP catalog...\"\n"
             "update_ip_catalog -quiet\n"
@@ -596,60 +596,69 @@ puts "Adding source files..."
             "} else {\n"
             "    catch {report_ip_status -file ip_status_initial.txt}\n"
             "}\n"
+            "# Get project part for mismatch detection\n"
+            "set project_part [get_property PART [current_project]]\n"
+            'puts "Project FPGA part: $project_part"\n'
+            "\n"
+            "# Phase 1: Upgrade and retarget locked IPs\n"
             "set locked_ips [get_ips -filter {IS_LOCKED == true}]\n"
             "if {[llength $locked_ips] > 0} {\n"
-            '    puts "Found [llength $locked_ips] locked IP cores. Attempting force unlock sequence..."\n'
+            '    puts "Found [llength $locked_ips] locked IP cores. Attempting retarget to $project_part..."\n'
             "    foreach ip $locked_ips {\n"
             "        set nm [get_property NAME $ip]\n"
-            '        puts "Force unlocking IP: $nm"\n'
-            "        # Force unlock the IP first\n"
-            "        catch {set_property IS_LOCKED false $ip}\n"
-            "        # Handle version mismatches\n"
-            "        catch {upgrade_ip -quiet -vlnv [get_property IPDEF $ip] $ip}\n"
-            "        # Clear stale generated products\n"
+            '        puts "Retargeting IP: $nm"\n'
+            "        # Upgrade IP to current Vivado version\n"
+            "        catch {upgrade_ip -quiet $ip}\n"
+            "        # Reset stale generated products\n"
             "        catch {reset_target all $ip}\n"
+            "        # Regenerate targets for current project part\n"
+            "        catch {generate_target all $ip}\n"
             "    }\n"
             "}\n"
-            "# Force upgrade any out-of-date IPs\n"
-            "set upgrade_ips [get_ips -filter {UPGRADE_VERSIONS != \"\"}]\n"
+            "# Upgrade any out-of-date IPs\n"
+            'set upgrade_ips [get_ips -filter {UPGRADE_VERSIONS != ""}]\n'
             "if {[llength $upgrade_ips] > 0} {\n"
             '    puts "Upgrading [llength $upgrade_ips] out-of-date IP cores..."\n'
             "    foreach ip $upgrade_ips {\n"
             "        catch {upgrade_ip -quiet $ip}\n"
             "    }\n"
             "}\n"
-            "# Second pass regeneration for all IPs (locked or not)\n"
+            "\n"
+            "# Phase 2: Regenerate all unlocked IPs\n"
             'puts "Regenerating all IP cores..."\n'
             "foreach ip [get_ips] {\n"
-            "    set nm [get_property NAME $ip]\n"
-            "    catch {reset_target all $ip}\n"
-            "    if {[catch {generate_target all $ip} gen_err]} {\n"
-            '        puts "WARNING: generate_target failed for $nm : $gen_err"\n'
-            "        # Try with synthesis target only as fallback\n"
-            "        catch {generate_target synthesis $ip}\n"
+            "    if {![get_property IS_LOCKED $ip]} {\n"
+            "        if {[catch {generate_target all $ip} gen_err]} {\n"
+            "            set nm [get_property NAME $ip]\n"
+            '            puts "WARNING: generate_target failed for $nm : $gen_err"\n'
+            "            catch {generate_target synthesis $ip}\n"
+            "        }\n"
             "    }\n"
             "}\n"
-            "# Final status check\n"
+            "\n"
+            "# Phase 3: Final verification\n"
             "set still_locked [get_ips -filter {IS_LOCKED == true}]\n"
             "if {[llength $still_locked] > 0} {\n"
-            '    puts "WARNING: Some IP cores remain locked: [join [get_property NAME $still_locked] \\",\\"]"\n'
-            '    puts "Attempting last resort: manual unlock and regenerate..."\n'
+            '    puts "WARNING: [llength $still_locked] IP cores remain locked after retarget."\n'
+            '    puts "Attempting final regeneration pass..."\n'
             "    foreach ip $still_locked {\n"
-            "        catch {set_property IS_LOCKED false $ip}\n"
+            "        catch {upgrade_ip -quiet $ip}\n"
+            "        catch {reset_target all $ip}\n"
             "        catch {generate_target all $ip}\n"
             "    }\n"
-            "    # Re-check after last resort\n"
             "    set final_locked [get_ips -filter {IS_LOCKED == true}]\n"
             "    if {[llength $final_locked] > 0} {\n"
-            '        puts "ERROR: Cannot unlock IPs: [join [get_property NAME $final_locked] \\",\\"]"\n'
-            '        puts "ERROR: Try deleting the project and regenerating from scratch."\n'
-            '        error "Unrecoverable locked IP cores: [join [get_property NAME $final_locked] \\",\\"] . Please delete the project or manually remove/regenerate these IP cores and retry."\n'
+            '        puts "ERROR: Cannot retarget IPs: [join [get_property NAME $final_locked] \\\\",\\\\"]"\n'
+            '        puts "ERROR: IP cores were generated for a different part/speed-grade than $project_part"\n'
+            '        error "Unrecoverable locked IP cores. Regenerate IPs for part $project_part."\n'
             "    }\n"
-            "} else { puts \"All IP cores unlocked/regenerated successfully.\" }\n"
+            '} else { puts "All IP cores unlocked/regenerated successfully for $project_part." }\n'
             "if {[llength [get_ips]] > 0} {\n"
             "    catch {report_ip_status -file ip_status_final.txt}\n"
             "}\n"
         )
+
+
 
         # Ensure all .sv and .svh files are treated as SystemVerilog
         script_content += "\n# Set SystemVerilog file types\n"

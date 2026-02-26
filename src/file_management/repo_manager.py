@@ -445,15 +445,15 @@ def is_repository_accessible(
 
         # Check if repo is valid
         if not RepoManager._is_valid_repo(repo_root):
-            raise RuntimeError("Repository not valid")
+            return False
 
         # If board_type specified, check if that board is accessible
         if board_type is not None:
             try:
                 RepoManager.get_board_path(board_type, repo_root=repo_root)
-            except:
-                raise RuntimeError("Board not found")
+            except Exception:
+                return False
                 
         return True
     except Exception:
-        raise RuntimeError("Repository not accessible")
+        return False
